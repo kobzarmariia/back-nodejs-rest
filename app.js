@@ -1,17 +1,26 @@
 const path = require("path");
+const fs = require("fs");
+const https = require("https");
 
 const express = require("express");
 const bodyParser = require("body-parser");
 const mongoose = require("mongoose");
 const multer = require("multer");
 const graphqlHttp = require("express-graphql");
+const helmet = require("helmet");
+const morgan = require("morgan");
 
 const graphqlSchema = require("./graphql/schema");
 const graphqlResolver = require("./graphql/resolvers");
 const auth = require("./middleware/auth");
 const { clearImage } = require("./util/file");
 
+const MONGODB_URI = `mongodb+srv://${process.env.MONGO_USER}:${process.env.MONGO_PASSWORD}@cluster0-3ymr1.mongodb.net/${process.env.MONGO_DEFAULT_DATABASE}?authSource=admin&replicaSet=Cluster0-shard-0&readPreference=primary&appname=MongoDB%20Compass&ssl=true`;
+
 const app = express();
+
+// const privateKey = fs.readFileSync("server.key");
+// const certificate = fs.readFileSync("server.cert");
 
 const fileStorage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -54,6 +63,15 @@ app.use((req, res, next) => {
   next();
 });
 
+const accessLogStream = fs.createWriteStream(
+  path.join(__dirname, "access.log"),
+  {
+    flags: "a"
+  }
+);
+app.use(helmet());
+app.use(morgan("combined", { stream: accessLogStream }));
+
 app.use(auth);
 
 app.put("/post-image", (req, res, next) => {
@@ -77,7 +95,7 @@ app.use(
     schema: graphqlSchema,
     rootValue: graphqlResolver,
     graphiql: true,
-    formatError(err) {
+    customFormatErrorFn(err) {
       if (!err.originalError) {
         return err;
       }
@@ -98,11 +116,11 @@ app.use((error, req, res, next) => {
 });
 
 mongoose
-  .connect(
-    "mongodb+srv://mariakobzar:@cluster0-3ymr1.mongodb.net/messages?authSource=admin&replicaSet=Cluster0-shard-0&readPreference=primary&appname=MongoDB%20Compass&ssl=true",
-    { useNewUrlParser: true, useUnifiedTopology: true }
-  )
+  .connect(MONGODB_URI, { useNewUrlParser: true, useUnifiedTopology: true })
   .then(result => {
-    const server = app.listen(8080);
+    // const server = https;
+    // .createServer({ key: privateKey, cert: certificate }, app)
+    // .listen(process.env.PORT || 8080);
+    app.listen(process.env.PORT || 8080);
   })
   .catch(err => console.log(err));
