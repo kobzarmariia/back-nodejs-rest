@@ -1,4 +1,4 @@
-const mongoose = require("mongoose");
+const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
 
 const postSchema = new Schema(
@@ -16,12 +16,12 @@ const postSchema = new Schema(
       required: true
     },
     creator: {
-      type: Schema.Types.ObjectId, //not just object
-      ref: "User",
+      type: Schema.Types.ObjectId,
+      ref: 'User',
       required: true
     }
   },
-  { timestamps: true } //mongoose automatically add timestamps createdAt: updatedAt:
+  { timestamps: true }
 );
 
-module.exports = mongoose.model("Post", postSchema);
+module.exports = mongoose.model('Post', postSchema);

@@ -13,7 +13,7 @@ exports.getPosts = async (req, res, next) => {
   try {
     const totalItems = await Post.find().countDocuments();
     const posts = await Post.find()
-      .populate("creator") //creator field - id ref, but we shoud sent all unformation about creator
+      .populate("creator")
       .sort({ createdAt: -1 })
       .skip((currentPage - 1) * perPage)
       .limit(perPage);
@@ -57,18 +57,9 @@ exports.createPost = async (req, res, next) => {
     const user = await User.findById(req.userId);
     user.posts.push(post);
     await user.save();
-    // ON FRONT
-    // socket.on("posts", data => { if (data.action === "create") {
-    // this.addPost(data.post); }
-    // ON FRONT
     io.getIO().emit("posts", {
-      //sent to all devices
-      //chanel - "posts"
-      //create action io = require("socket.io")(httpServer);
-      action: "create", //diferent events
+      action: "create",
       post: { ...post._doc, creator: { _id: req.userId, name: user.name } }
-      //for creator it shoul be not only id - sent all data
-      //data.post - _doc all data about post
     });
     res.status(201).json({
       message: "Post created successfully!",
@@ -128,7 +119,6 @@ exports.updatePost = async (req, res, next) => {
       throw error;
     }
     if (post.creator._id.toString() !== req.userId) {
-      //+ _id because it is full date of creator
       const error = new Error("Not authorized!");
       error.statusCode = 403;
       throw error;
@@ -140,7 +130,7 @@ exports.updatePost = async (req, res, next) => {
     post.imageUrl = imageUrl;
     post.content = content;
     const result = await post.save();
-    io.getIO().emit("post", { action: "update", post: result });
+    io.getIO().emit("posts", { action: "update", post: result });
     res.status(200).json({ message: "Post updated!", post: result });
   } catch (err) {
     if (!err.statusCode) {
@@ -165,14 +155,13 @@ exports.deletePost = async (req, res, next) => {
       error.statusCode = 403;
       throw error;
     }
-    // Check logged in user
     clearImage(post.imageUrl);
     await Post.findByIdAndRemove(postId);
 
     const user = await User.findById(req.userId);
     user.posts.pull(postId);
     await user.save();
-    io.getIO().emit("post", { action: "delete", post: postId });
+    io.getIO().emit("posts", { action: "delete", post: postId });
     res.status(200).json({ message: "Deleted post." });
   } catch (err) {
     if (!err.statusCode) {
